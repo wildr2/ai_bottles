@@ -1,30 +1,21 @@
 import copy
 from item import *
+from bottles_generator import generate_ingredient_defs
 
 class IngredientGlossary():
 	def __init__(self):
-		items = [
-			Bottle(),
-			Item("Violet", 3),			
-			Item("Dragonfly Wings", 10),
-			Item("Salt", 1),
-			Item("Pepper", 1),
-			Item("Red Berries", 3),
-			Item("Yellow Berries", 4),
-			Item("Ginger", 2),
-			Item("Garlic", 2),
-			Item("Fire Salts", 4),
-			Item("Chlorabloom", 9),
-			Item("Glowstool", 5),
+		ingredient_defs = [
+			IngredientDef("Bottle", Bottle, "An empty bottle.", cost=4)
 		]
-		self.items = {item.name: item for item in items}
+		ingredient_defs.extend(generate_ingredient_defs())
+		self.ingredient_defs = {ingredient_def.name: ingredient_def for ingredient_def in ingredient_defs}
 	
 	def instantiate_by_name(self, name: str):
-		return self.instantiate_by_def(self.items[name])
+		return self.instantiate_by_def(self.ingredient_defs[name])
 	
-	def instantiate_by_def(self, item: Item):
-		return copy.deepcopy(item)
+	def instantiate_by_def(self, ingredient_def: IngredientDef):
+		return ingredient_def.item_type(ingredient_def)
 	
 	def instantiate_n(self, n):
-		items = random.choices(list(self.items.values()), k=n)
-		return [self.instantiate_by_def(item) for item in items]
+		ingredient_defs = random.choices(list(self.ingredient_defs.values()), k=n)
+		return [self.instantiate_by_def(ingredient_def) for ingredient_def in ingredient_defs]

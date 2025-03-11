@@ -1,14 +1,15 @@
+from __future__ import annotations 
 import util
 import random
 import time
+from typing import Type
 
 class Item():
-	def __init__(self, name, cost):
-		self.name = name
-		self.cost = cost
+	def __init__(self, item_def: ItemDef):
+		self.item_def = item_def
+		self.name = item_def.name if item_def else ""
+		self.desc = item_def.desc if item_def else ""
 		self.selected = False
-		self.desc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-		self.desc = self.desc[random.randint(0, int(len(self.desc)*0.5)):].lstrip().capitalize()
 		self.room = None
 	
 	def get_resale_cost(self):
@@ -28,12 +29,32 @@ class Item():
 
 	def combine(self, other):
 		pass
-		
-class Bottle(Item):
-	def __init__(self):
-		super().__init__("Bottle", 4)
+
+class ItemDef():
+	def __init__(self, name, item_type: Type[Item]=Item, desc=""):
+		self.name = name
+		self.desc = desc
+		self.item_type = item_type
+
+class Ingredient(Item):
+	def __init__(self, item_def: IngredientDef):
+		super().__init__(item_def)
+		self.cost = item_def.cost if item_def else 0
+
+class IngredientDef(ItemDef):
+	def __init__(self, name, item_type: Type[Ingredient]=Ingredient, desc="", cost=0):
+		super().__init__(name, item_type, desc)
+		self.desc = desc
+		self.cost = cost
+
+		if not self.desc:
+			self.desc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+			self.desc = self.desc[random.randint(0, int(len(self.desc)*0.5)):].lstrip().capitalize()
+
+class Bottle(Ingredient):
+	def __init__(self, item_def):
+		super().__init__(item_def)
 		self.ingredients = []
-		self.desc = "An empty bottle."
 		self.brewing = False
 		self.brewing_start_time = -1
 
@@ -59,9 +80,11 @@ class Bottle(Item):
 		return int(sum(item.cost for item in self.ingredients) * 0.5)
 	
 	def empty(self):
-		self.__init__()
+		self.__init__(self.item_def)
 	
 	def combine(self, other):
+		if type(other) is not Ingredient:
+			return
 		if type(other) is Bottle:
 			return
 		if len(self.ingredients) > 1:
@@ -84,7 +107,8 @@ class Bottle(Item):
 
 class Request(Item):
 	def __init__(self, name):
-		super().__init__(name, 0)
+		super().__init__(item_def=None)
+		self.name = name
 		self.desc = "\"I'm preparing to host a grand midnight feast for the fae, but the enchanted banquet table keeps vanishing whenever I look away!\""
 		self.potion = None
 		self.pending_response = False

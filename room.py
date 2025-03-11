@@ -106,9 +106,9 @@ class ShopRoom(Room):
 		self.shop_length = 6
 		self.item_pool = ingredientGlossary.instantiate_n(50)
 		self.item_pool_i = -1
-		self.populate_n(self.shop_length)
+		self._populate_n(self.shop_length)
 
-	def populate(self):
+	def _populate(self):
 		if len(self.item_pool) == 0:
 			return
 		if self.item_pool_i < 0:
@@ -117,9 +117,9 @@ class ShopRoom(Room):
 		self.add_item(self.item_pool.pop(self.item_pool_i))
 		self.item_pool_i -= 1
 		
-	def populate_n(self, n):
+	def _populate_n(self, n):
 		for i in range(self.shop_length):
-			self.populate()
+			self._populate()
 
 	def reroll(self):
 		for i in range(len(self.items)-1, -1, -1):
@@ -127,7 +127,7 @@ class ShopRoom(Room):
 			self.remove_item(i)
 			self.item_pool.append(item)
 			item.selected = False
-		self.populate_n(self.shop_length)
+		self._populate_n(self.shop_length)
 
 class RequestRoom(Room):
 	def __init__(self):

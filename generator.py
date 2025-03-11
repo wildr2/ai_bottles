@@ -1,16 +1,10 @@
 import ollama
 from openai import OpenAI
 import time
-import re
-import random
-import pickle
 from dataclasses import dataclass
-import string
-
 # Create api_keys.py locally.
 import api_keys
 
-chr_count = 2
 provider = "openai"
 model_name = {
 	"ollama": "llama3.2:3b-instruct-q4_K_M",
@@ -21,19 +15,7 @@ model_name = {
 	# "openai": "microsoft/wizardlm-2-8x22b",
 }[provider]
 ollama_context_length = 1024
-openai_retry_count = 3
-openai_retry_delay_seconds = 1
-
-debug_log = False
 debug_no_model = False
-use_dummy_data = False
-dummy_data_path = "dummy_data/dummy_data.pkl"
-
-prompt_fight = """{0}The above {1} characters will now be forced to fight to the death in the arena. Do not assume they are skilled fighters or that there abilities will be useful, rely only on the above descriptions. In present tense, give a very short account of what happens and who survives. Assume the reader is not familiar with the characters."""
-
-# ingredient (name, desc, cost, properties)
-# potion (name, desc)
-# customer (name, request)
 
 class Generator():
 	@dataclass(kw_only=True)
@@ -45,7 +27,9 @@ class Generator():
 		self.model_name = model_name
 
 	def generate(self, prompt, options: Options):
-		pass
+		content = ""
+		elapsed = 0
+		return content, elapsed
 
 class OllamaGenerator(Generator):
 	def __init__(self, model_name, context_length):
@@ -73,11 +57,13 @@ class OpenAIGenerator(Generator):
 			base_url="https://openrouter.ai/api/v1",
 			api_key=api_key
 		)
+		self.retry_count = 3
+		self.retry_delay = 1
 
 	def generate(self, prompt, options: Generator.Options):
 		content = ""
 		start_time = time.time()
-		for i in range(openai_retry_count):
+		for i in range(self.retry_count):
 			response = self.client.chat.completions.create(
 				model=self.model_name,
 				messages=[
@@ -90,45 +76,18 @@ class OpenAIGenerator(Generator):
 				break
 			except:
 				error = response.model_extra["error"]
-				print(f"OpenAIGenerator error (attempt {i+1}/{openai_retry_count}): ", error)
-				time.sleep(openai_retry_delay_seconds)
+				print(f"OpenAIGenerator error (attempt {i+1}/{self.retry_count}): ", error)
+				time.sleep(self.retry_delay)
 
 		elapsed = time.time() - start_time
 		return content, elapsed
-
+	
 def create_generator():
-	if provider == "ollama":
+	if debug_no_model:
+		return Generator("dummy")
+	elif provider == "ollama":
 		return OllamaGenerator(model_name, ollama_context_length)
 	elif provider == "openai":
 		return OpenAIGenerator(model_name, api_keys.openai_api_key)
 	else:
 		raise ValueError(f"Unknown provider: {provider}")
-
-generator = create_generator()
-
-# class TraitPool:
-# 	def __init__(self):
-# 		self.traits = {}
-# 		start_time = time.time()
-# 		for trait_type in trait_types:
-# 			try:
-# 				self.traits[trait_type.name] = gen_traits(trait_type, start_time)
-# 			except:
-# 				raise
-
-# 	def log(self):
-# 		log_header("Trait Pool")
-# 		for trait_type in trait_types:
-# 			log_header(trait_type.name.capitalize())
-# 			for trait in self.traits[trait_type.name]: print(f"{trait}")
-# 		log_header("")
-
-# 	def serialize(self, file):
-# 		pickle.dump(self, file)
-
-# 	def deserialize(file):
-# 		pool = pickle.load(file)
-# 		for trait_type in trait_types:
-# 			assert trait_type.name in pool.traits, f"TraitPool file '{file.name}' missing trait '{trait_type.name}'"
-# 			assert len(pool.traits[trait_type.name]) >= trait_type.offer_count * chr_count
-# 		return pool

@@ -70,9 +70,9 @@ class Game():
 			if self.input_key == action.key and action.is_available(self):
 				action.do(self)
 
-		self.draw()
+		self._draw()
 
-	def draw(self):
+	def _draw(self):
 		try:
 			self.room.draw(self)
 		except:
@@ -128,13 +128,13 @@ class Game():
 		room.remove_item(item_i)
 		self.set_room(self.request_room)
 		request = self.request_room.get_selected_item()
-		request.fill(item, self.on_request_response)
+		request.fill(item, self._on_request_response)
 
-	def on_request_response(self, request, success):
+	def _on_request_response(self, request, success):
 		if success:
 			self.gold += request.potion.get_fill_request_cost()
 		
-def curses_game(stdscr):
+def _curses_game(stdscr):
 	curses.curs_set(0) # Hide cursor
 	stdscr.nodelay(1) # Non-blocking input
 	
@@ -153,7 +153,7 @@ def curses_game(stdscr):
 		pass
 
 def main():
-	curses.wrapper(curses_game)
+	curses.wrapper(_curses_game)
 
 from room import *
 from action import *
@@ -161,4 +161,3 @@ from ingredient_glossary import *
 
 if __name__ == "__main__":
 	main()
-	
