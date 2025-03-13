@@ -1,4 +1,3 @@
-import copy
 from item import *
 from bottles_generator import generate_ingredient_defs
 

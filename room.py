@@ -163,4 +163,4 @@ class RequestRoom(Room):
 			f"{index+1}. {'>> ' if item.selected else ''} {item.get_display_name()}")
 
 from game import Game
-from item import *
+from item import Request

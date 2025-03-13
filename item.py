@@ -3,6 +3,7 @@ import util
 import random
 import time
 from typing import Type
+import asyncio
 
 class Item():
 	def __init__(self, item_def: ItemDef):
@@ -56,13 +57,9 @@ class Bottle(Ingredient):
 		super().__init__(item_def)
 		self.ingredients = []
 		self.brewing = False
-		self.brewing_start_time = -1
 
 	def tick(self):
 		super().tick()	
-		if self.brewing and time.time() - self.brewing_start_time > 2:
-			self.brewing = False
-			self.desc = "A potion."
 	
 	def get_display_name(self):
 		return f"{self.name}{' ' + util.get_spinner() if self.brewing else '' }"
@@ -98,12 +95,21 @@ class Bottle(Ingredient):
 			self.name = f"Bottle of {other.name}"
 			self.desc = f"A bottle containing {other.name}."
 		else:
-			self.name = "A bottle of brewing potion"
-			self.desc = f"A bottle containing a brewing potion."
-			self.brewing = True
-			self.brewing_start_time = time.time()
+			self.generate_potion_task = asyncio.create_task(self._generate_potion())
 			
 		super().combine(other)
+
+	async def _generate_potion(self):
+		self.name = "Bottle of..."
+		self.desc = f"A bottle containing a brewing potion."
+		self.brewing = True
+		name, desc = await generator.generate_potion(self.ingredients)	
+		self._on_potion_generated(name, desc)
+
+	def _on_potion_generated(self, name, desc):
+		self.brewing = False
+		self.name = name
+		self.desc = desc
 
 class Request(Item):
 	def __init__(self, name):
@@ -129,12 +135,17 @@ class Request(Item):
 		super().tick()	
 		if self.pending_response:
 			if time.time() - self.pending_response_start_time > 2:
-				self.pending_response = False
-				self.desc += "\n\n\"That worked great!\""
-				self.on_response(request=self, success=True)
+				response = generator.generate_request_response(self.desc, self.potion)
+				self._on_response_generated(response)
+
+	def _on_response_generated(self, response):
+		self.pending_response = False
+		self.desc += f"\n\n{response}"
+		self.on_response(request=self, success=True)
 
 	def get_display_desc(self):
 		spinner = "\n\n" + util.get_spinner() if self.pending_response else ""
 		return f"{self.desc}{spinner}"
 	
 from room import *
+import bottles_generator as generator

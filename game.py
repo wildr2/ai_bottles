@@ -1,4 +1,5 @@
 import curses
+import asyncio
 
 class Game():
 	width = 100
@@ -29,7 +30,7 @@ class Game():
 
 		self.room = self.desk_room
 		self.prev_room = None
-		self.gold = 5
+		self.gold = 100
 		self.score = 0
 		self.combining = False
 
@@ -134,7 +135,7 @@ class Game():
 		if success:
 			self.gold += request.potion.get_fill_request_cost()
 		
-def _curses_game(stdscr):
+async def main(stdscr):
 	curses.curs_set(0) # Hide cursor
 	stdscr.nodelay(1) # Non-blocking input
 	
@@ -148,16 +149,16 @@ def _curses_game(stdscr):
 			game.input_key = stdscr.getch()
 			if game.quit:
 				break
+
 			stdscr.refresh()
+			curses.curs_set(0) # Hide cursor
+			await asyncio.sleep(0)
 	except KeyboardInterrupt:
 		pass
-
-def main():
-	curses.wrapper(_curses_game)
 
 from room import *
 from action import *
 from ingredient_glossary import *
 
 if __name__ == "__main__":
-	main()
+	asyncio.run(curses.wrapper(main))

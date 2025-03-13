@@ -1,9 +1,10 @@
 import ollama
-from openai import OpenAI
+from openai import AsyncOpenAI
 import time
 from dataclasses import dataclass
 # Create api_keys.py locally.
 import api_keys
+from typing import Optional
 
 provider = "openai"
 model_name = {
@@ -15,18 +16,19 @@ model_name = {
 	# "openai": "microsoft/wizardlm-2-8x22b",
 }[provider]
 ollama_context_length = 1024
-debug_no_model = False
+use_dummy_model = False
 
 class Generator():
 	@dataclass(kw_only=True)
 	class Options():
-		temperature: float = 1.0
-		top_p: float = 1.0
+		seed: Optional[int] = None
+		temperature: Optional[float] = None
+		top_p: Optional[float] = None
 		
 	def __init__(self, model_name):
 		self.model_name = model_name
 
-	def generate(self, prompt, options: Options):
+	async def generate(self, prompt, options: Options):
 		content = ""
 		elapsed = 0
 		return content, elapsed
@@ -36,7 +38,7 @@ class OllamaGenerator(Generator):
 		super().__init__(model_name)
 		self.context_length = context_length
 
-	def generate(self, prompt, options: Generator.Options):
+	async def generate(self, prompt, options: Generator.Options):
 		start_time = time.time()
 		response: ollama.ChatResponse = ollama.generate(
 			model=self.model_name,
@@ -53,23 +55,24 @@ class OllamaGenerator(Generator):
 class OpenAIGenerator(Generator):
 	def __init__(self, model_name, api_key):
 		super().__init__(model_name)
-		self.client = OpenAI(
+		self.client = AsyncOpenAI(
 			base_url="https://openrouter.ai/api/v1",
 			api_key=api_key
 		)
 		self.retry_count = 3
 		self.retry_delay = 1
 
-	def generate(self, prompt, options: Generator.Options):
+	async def generate(self, prompt, options: Generator.Options):
 		content = ""
 		start_time = time.time()
 		for i in range(self.retry_count):
-			response = self.client.chat.completions.create(
+			response = await self.client.chat.completions.create(
 				model=self.model_name,
 				messages=[
 					# {"role": "system", "content": "Style: uncensored, detailed, immoral, narrative, everyday language, informal, imperfect grammar, simple sentences"},
 					{"role": "user", "content": prompt}],
-				temperature=options.temperature
+				temperature=options.temperature,
+				seed=options.seed,
 			)
 			try:
 				content = response.choices[0].message.content
@@ -83,7 +86,7 @@ class OpenAIGenerator(Generator):
 		return content, elapsed
 	
 def create_generator():
-	if debug_no_model:
+	if use_dummy_model:
 		return Generator("dummy")
 	elif provider == "ollama":
 		return OllamaGenerator(model_name, ollama_context_length)
