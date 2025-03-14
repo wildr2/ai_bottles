@@ -5,12 +5,18 @@ import item as itm
 class Action():
 	def __init__(self):
 		self.name = "jump"
-		self.key = ord("j")
+		self.key = "j"
 		self.room_types = [rm.Room]
 		self.requires_selected_item = False
 	
+	def _key_label(self):
+		nice_keys = {"backspace": "bksp"}
+		nice_key = nice_keys.get(self.key, self.key)
+		label = f"{nice_key}:"
+		return f"{label:<8}"	
+
 	def get_display_name(self, game):
-		return f"{chr(self.key)}: {self.name}"
+		return f"{self._key_label()}{self.name}"
 
 	def is_available(self, game):
 		if type(game.room) not in self.room_types:
@@ -25,13 +31,13 @@ class Action():
 class BuyAction(Action):
 	def __init__(self):
 		self.name = "buy"
-		self.key = ord("W")
+		self.key = "enter"
 		self.room_types = [rm.ShopRoom]
 		self.requires_selected_item = True
 
 	def get_display_name(self, game):
 		selected = game.room.get_selected_item()
-		return f"{chr(self.key)}: {self.name} {selected.cost}{gm.Game.gold_chr}"
+		return f"{self._key_label()}{self.name} {selected.cost}{gm.Game.gold_chr}"
 	
 	def do(self, game):
 		super().do(game)
@@ -40,16 +46,16 @@ class BuyAction(Action):
 class SellAction(Action):
 	def __init__(self):
 		self.name = "discard"
-		self.key = ord("x")
+		self.key = "backspace"
 		self.room_types = [rm.DeskRoom]
 		self.requires_selected_item = True
 
 	def get_display_name(self, game):
 		selected = game.room.get_selected_item()
 		if type(selected) == itm.Bottle and len(selected.ingredients) > 0:
-			return f"{chr(self.key)}: discard contents +{selected.get_contents_discard_value()}{gm.Game.gold_chr}"
+			return f"{self._key_label()}discard contents +{selected.get_contents_discard_value()}{gm.Game.gold_chr}"
 		else:
-			return f"{chr(self.key)}: discard +{selected.get_discard_value()}{gm.Game.gold_chr}"
+			return f"{self._key_label()}discard +{selected.get_discard_value()}{gm.Game.gold_chr}"
 
 	def do(self, game):
 		super().do(game)
@@ -59,7 +65,7 @@ class SellAction(Action):
 class CombineItemsAction(Action):
 	def __init__(self):
 		self.name = "combine with..."
-		self.key = ord("+")
+		self.key = "enter"
 		self.room_types = [rm.DeskRoom]
 		self.requires_selected_item = True
 
@@ -78,14 +84,14 @@ class CombineItemsAction(Action):
 class FillRequestAction(Action):
 	def __init__(self):
 		self.name = "sell"
-		self.key = ord("Q")
+		self.key = "enter"
 		self.room_types = [rm.DeskRoom]
 		self.requires_selected_item = True
 
 	def get_display_name(self, game):
 		selected = game.room.get_selected_item()
 		request = game.request_room.get_selected_item()
-		return f"{chr(self.key)}: {self.name} to {request.name} +{selected.get_fill_request_value()}{gm.Game.gold_chr}"
+		return f"{self._key_label()}{self.name} to {request.name} +{selected.get_fill_request_value()}{gm.Game.gold_chr}"
 
 	def is_available(self, game):
 		if not super().is_available(game):
@@ -103,7 +109,7 @@ class FillRequestAction(Action):
 class RerollShopAction(Action):
 	def __init__(self):
 		self.name = f"reroll {rm.ShopRoom.reroll_cost}{gm.Game.gold_chr}"
-		self.key = ord("r")
+		self.key = "r"
 		self.room_types = [rm.ShopRoom]
 		self.requires_selected_item = False
 

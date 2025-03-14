@@ -6,7 +6,7 @@ import util
 class Room():
 	def	__init__(self, name, key):
 		self.name = name
-		self.key = ord(key)
+		self.key = key
 		self.items = []
 
 	def tick(self):
@@ -53,7 +53,7 @@ class Room():
 		game.stdscr.addstr(0, 0, self.name.upper().center(gm.Game.width,"-"))
 
 		# Go to room actions.
-		actions_str = "".join(f"{chr(room.key)}: {room.name.lower()}  " for room in game.rooms).rstrip()
+		actions_str = "".join(f"{room.key}: {room.name.lower()}  " for room in game.rooms).rstrip()
 		state_str = f"Gold: {game.gold}●  Score: {game.score}"
 		str = state_str
 		str += actions_str.rjust(gm.Game.width - len(str), " ")

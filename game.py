@@ -1,5 +1,7 @@
+import msvcrt
 import curses
 import asyncio
+import keyboard
 import action as act
 import room as rm
 import item as itm
@@ -11,7 +13,7 @@ class Game():
 
 	def __init__(self, stdscr):
 		self.stdscr = stdscr
-		self.input_key = -1
+		self.input_key = ""
 		self.quit = False
 
 		self.ingredientGlossary = ig.IngredientGlossary()
@@ -36,45 +38,52 @@ class Game():
 		self.gold = 100
 		self.score = 0
 		self.combining = False
+		
+		keyboard.on_press(self._on_keypress, suppress=False)
 
 	def tick(self):
 		for room in self.rooms:
 			room.tick()
-
+		
 		# Switch room.
 		for room in self.rooms:
 			if self.input_key == room.key:
 				if room == self.room:
-					if self.prev_room:
-						self.set_room(self.prev_room)
+					# if self.prev_room:
+					# 	self.set_room(self.prev_room)
+					pass
 				else:
 					self.set_room(room)
-
-		# Item combining.
-		self.combining = self.combining if type(self.room) == rm.DeskRoom else False
-		combining_i = self.room.get_selected_item_index() if self.combining else -1
-		self.combining = combining_i >= 0
-	
-		# Item selection.
-		for i in range(10):
-			key = ord(str(i))
-			if self.input_key == key:
-				index = 9 if i == 0 else i-1
-				self.room.toggle_select(index)
-				if self.combining:
-					selected_i = self.room.get_selected_item_index()
-					if selected_i >= 0:
-						self.combine_items(self.room.items[combining_i], self.room.items[selected_i])
-		# Esc or space to deselect.
-		if self.input_key == 27 or self.input_key == ord(" "):
-			self.room.select(-1)
 
 		# Contextual actions.
 		for action in self.actions:
 			if self.input_key == action.key and action.is_available(self):
 				action.do(self)
 
+		# Item combining.
+		self.combining = self.combining if type(self.room) == rm.DeskRoom else False
+		self.combining_item_index = self.room.get_selected_item_index() if self.combining else -1
+		self.combining = self.combining_item_index >= 0
+
+		# Item selection.
+		for i in range(10):
+			if self.input_key == str(i):
+				index = 9 if i == 0 else i-1
+				self.room.toggle_select(index)
+				if self.combining:
+					selected_i = self.room.get_selected_item_index()
+					if selected_i >= 0:
+						self.combine_items(self.room.items[self.combining_item_index], self.room.items[selected_i])
+
+		# Esc or space to deselect.
+		if self.input_key == "esc" or self.input_key == "space":
+			self.room.select(-1)
+
 		self._draw()
+		self.input_key = ""
+
+	def _on_keypress(self, e):
+		self.input_key = e.name
 
 	def _draw(self):
 		self.room.draw(self)
@@ -140,18 +149,25 @@ async def main(stdscr):
 	stdscr.nodelay(1) # Non-blocking input
 	
 	game = Game(stdscr)
+		
+	try:
+		while True:
+			stdscr.clear()
+			game.tick()
 
-	while True:
-		stdscr.clear()
-		game.tick()
+			if game.quit:
+				break
 
-		game.input_key = stdscr.getch()
-		if game.quit:
-			break
+			stdscr.refresh()
+			curses.curs_set(0) # Hide cursor
+			await asyncio.sleep(0)
 
-		stdscr.refresh()
-		curses.curs_set(0) # Hide cursor
-		await asyncio.sleep(0)
+	finally:
+		keyboard.unhook_all()
+
+		# Prevent key flood after exit.
+		while msvcrt.kbhit():
+			msvcrt.getch()
 
 if __name__ == "__main__":
 	try:
