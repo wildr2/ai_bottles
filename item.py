@@ -44,10 +44,11 @@ class Ingredient(Item):
 		self.cost = item_def.cost if item_def else 0
 
 class IngredientDef(ItemDef):
-	def __init__(self, name, item_type: Type[Ingredient]=Ingredient, desc="", cost=0):
+	def __init__(self, name, item_type: Type[Ingredient]=Ingredient, desc="", cost=0, shop_weight=1):
 		super().__init__(name, item_type, desc)
 		self.desc = desc
 		self.cost = cost
+		self.shop_weight = shop_weight
 
 		if not self.desc:
 			self.desc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."

@@ -121,31 +121,18 @@ class ShopRoom(Room):
 	
 	def __init__(self, ingredientGlossary):
 		super().__init__("Market", "e", max_items=6)
-		self.item_pool = ingredientGlossary.instantiate_n(50)
-		self.item_pool_i = -1
-		self._populate_n(self.max_items)
+		self.glossary = ingredientGlossary
+		self._populate()
 
 	def _populate(self):
-		if len(self.item_pool) == 0:
-			return
-		if self.item_pool_i < 0:
-			random.shuffle(self.item_pool)
-			self.item_pool_i = len(self.item_pool) - 1
-		self.add_item(self.item_pool.pop(self.item_pool_i))
-		self.item_pool_i -= 1
-		
-	def _populate_n(self, n):
-		for i in range(n):
-			self._populate()
+		for i in range(self.max_items):
+			self.remove_item(i)
+		new_items = self.glossary.instantiate_n(self.max_items)
+		for item in new_items:
+			self.add_item(item)
 
 	def reroll(self):
-		for i in range(self.max_items-1, -1, -1):
-			item = self.items[i]
-			if item:
-				self.remove_item(i)
-				self.item_pool.append(item)
-				item.selected = False
-		self._populate_n(self.max_items)
+		self._populate()
 
 class RequestRoom(Room):
 	def __init__(self):
