@@ -18,13 +18,13 @@ model_name = {
 ollama_context_length = 1024
 use_dummy_model = False
 
+@dataclass(kw_only=True)
+class Options():
+	seed: Optional[int] = None
+	temperature: Optional[float] = None
+	top_p: Optional[float] = None
+
 class Generator():
-	@dataclass(kw_only=True)
-	class Options():
-		seed: Optional[int] = None
-		temperature: Optional[float] = None
-		top_p: Optional[float] = None
-		
 	def __init__(self, model_name):
 		self.model_name = model_name
 
@@ -38,7 +38,7 @@ class OllamaGenerator(Generator):
 		super().__init__(model_name)
 		self.context_length = context_length
 
-	async def generate(self, prompt, options: Generator.Options):
+	async def generate(self, prompt, options: Options):
 		start_time = time.time()
 		response: ollama.ChatResponse = ollama.generate(
 			model=self.model_name,
@@ -62,7 +62,7 @@ class OpenAIGenerator(Generator):
 		self.retry_count = 3
 		self.retry_delay = 1
 
-	async def generate(self, prompt, options: Generator.Options):
+	async def generate(self, prompt, options: Options):
 		content = ""
 		start_time = time.time()
 		for i in range(self.retry_count):

@@ -1,5 +1,7 @@
 import random
-import textwrap
+import game as gm
+import item as itm
+import util
 
 class Room():
 	def	__init__(self, name, key):
@@ -48,25 +50,25 @@ class Room():
 		return self.items[index] if index >= 0 else None
 
 	def draw_header(self, game):
-		game.stdscr.addstr(0, 0, self.name.upper().center(Game.width,"-"))
+		game.stdscr.addstr(0, 0, self.name.upper().center(gm.Game.width,"-"))
 
 		# Go to room actions.
 		actions_str = "".join(f"{chr(room.key)}: {room.name.lower()}  " for room in game.rooms).rstrip()
 		state_str = f"Gold: {game.gold}●  Score: {game.score}"
 		str = state_str
-		str += actions_str.rjust(Game.width - len(str), " ")
+		str += actions_str.rjust(gm.Game.width - len(str), " ")
 		game.stdscr.addstr(1, 0, str)
 
 	def draw_item_list_entry(self, game, item, index):
 		game.stdscr.addstr(4+index, 0,\
-			f"{index+1}. {'>> ' if item.selected else ''} {item.name} {item.cost}{Game.gold_chr}" +\
+			f"{index+1}. {'>> ' if item.selected else ''} {item.name} {item.cost}{gm.Game.gold_chr}" +\
 			f"{' + ...' if item.selected and game.combining else ''}")
 
 	def draw_selected_desc(self, game):
 		selected_i = self.get_selected_item_index()
 		if selected_i >= 0:
 			selected = self.items[selected_i]
-			game.stdscr.addstr(4 + 10 + 1, 0, f"{textwrap.fill(selected.get_display_desc(), Game.width, break_long_words=False, replace_whitespace=False)}")
+			game.stdscr.addstr(4 + 10 + 1, 0, f"{util.wraptext(selected.get_display_desc(), gm.Game.width)}")
 
 	def draw_actions(self, game):
 		# Contextual actions.
@@ -133,9 +135,8 @@ class RequestRoom(Room):
 	def __init__(self):
 		super().__init__("Requests", "q")
 		self.max_requests = 3
-		request = Request("Sam")
 		items = [
-			request
+			itm.Request("Sam")
 		]
 		for item in items:
 			self.add_item(item)
@@ -155,12 +156,9 @@ class RequestRoom(Room):
 		# Don't deselect on leave (don't call super).
 		# Remove completed requests.
 		for i, request in enumerate(self.items):
-			if request.is_complete():
+			if request.complete:
 				self.remove_item(i)
 
 	def draw_item_list_entry(self, game, item, index):
 		game.stdscr.addstr(4+index, 0,\
 			f"{index+1}. {'>> ' if item.selected else ''} {item.get_display_name()}")
-
-from game import Game
-from item import Request

@@ -1,31 +1,34 @@
 import curses
 import asyncio
+import action as act
+import room as rm
+import item as itm
+import ingredient_glossary as ig
 
 class Game():
 	width = 100
 	gold_chr = "●"
 
 	def __init__(self, stdscr):
-		
 		self.stdscr = stdscr
 		self.input_key = -1
 		self.quit = False
 
-		self.ingredientGlossary = IngredientGlossary()
-		self.desk_room = DeskRoom(self.ingredientGlossary)
-		self.shop_room = ShopRoom(self.ingredientGlossary)
-		self.request_room = RequestRoom()
+		self.ingredientGlossary = ig.IngredientGlossary()
+		self.desk_room = rm.DeskRoom(self.ingredientGlossary)
+		self.shop_room = rm.ShopRoom(self.ingredientGlossary)
+		self.request_room = rm.RequestRoom()
 		self.rooms = [
 			self.request_room,
 			self.desk_room,
 			self.shop_room,
 		]
 		self.actions = [
-			RerollShopAction(),
-			BuyAction(),
-			CombineItemsAction(),
-			SellAction(),
-			FillRequestAction(),
+			act.RerollShopAction(),
+			act.BuyAction(),
+			act.CombineItemsAction(),
+			act.SellAction(),
+			act.FillRequestAction(),
 		]
 
 		self.room = self.desk_room
@@ -48,7 +51,7 @@ class Game():
 					self.set_room(room)
 
 		# Item combining.
-		self.combining = self.combining if type(self.room) == DeskRoom else False
+		self.combining = self.combining if type(self.room) == rm.DeskRoom else False
 		combining_i = self.room.get_selected_item_index() if self.combining else -1
 		self.combining = combining_i >= 0
 	
@@ -74,10 +77,7 @@ class Game():
 		self._draw()
 
 	def _draw(self):
-		try:
-			self.room.draw(self)
-		except:
-			pass
+		self.room.draw(self)
 
 	def set_room(self, room):
 		if self.room:
@@ -103,11 +103,11 @@ class Game():
 	
 	def sell_item(self, room, item_i):
 		item = room.items[item_i]
-		if type(item) == Bottle and len(item.ingredients) > 0:
-			self.gold += item.get_contents_resale_cost()
+		if type(item) == itm.Bottle and len(item.ingredients) > 0:
+			self.gold += item.get_contents_discard_value()
 			item.empty()
 		else:
-			self.gold += item.get_resale_cost()
+			self.gold += item.get_discard_value()
 			room.remove_item(item_i)
 	
 	def start_combining_items(self):
@@ -120,20 +120,20 @@ class Game():
 		item2.combine(item1)
 
 	def reroll_shop(self):
-		if self.gold >= ShopRoom.reroll_cost:
+		if self.gold >= rm.ShopRoom.reroll_cost:
 			self.room.reroll()
-			self.gold -= ShopRoom.reroll_cost
+			self.gold -= rm.ShopRoom.reroll_cost
 
 	def fill_request(self, room, item_i):
 		item = room.items[item_i]
 		room.remove_item(item_i)
 		self.set_room(self.request_room)
 		request = self.request_room.get_selected_item()
-		request.fill(item, self._on_request_response)
+		request.fill(item, self._on_request_outcome)
 
-	def _on_request_response(self, request, success):
+	def _on_request_outcome(self, request, success):
 		if success:
-			self.gold += request.potion.get_fill_request_cost()
+			self.gold += request.potion.get_fill_request_value()
 		
 async def main(stdscr):
 	curses.curs_set(0) # Hide cursor
@@ -141,24 +141,20 @@ async def main(stdscr):
 	
 	game = Game(stdscr)
 
-	try:
-		while True:
-			stdscr.clear()
-			game.tick()
+	while True:
+		stdscr.clear()
+		game.tick()
 
-			game.input_key = stdscr.getch()
-			if game.quit:
-				break
+		game.input_key = stdscr.getch()
+		if game.quit:
+			break
 
-			stdscr.refresh()
-			curses.curs_set(0) # Hide cursor
-			await asyncio.sleep(0)
-	except KeyboardInterrupt:
-		pass
-
-from room import *
-from action import *
-from ingredient_glossary import *
+		stdscr.refresh()
+		curses.curs_set(0) # Hide cursor
+		await asyncio.sleep(0)
 
 if __name__ == "__main__":
-	asyncio.run(curses.wrapper(main))
+	try:
+		asyncio.run(curses.wrapper(main))
+	except KeyboardInterrupt:
+		pass

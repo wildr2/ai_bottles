@@ -1,9 +1,10 @@
 from __future__ import annotations 
 import util
 import random
-import time
 from typing import Type
 import asyncio
+import bottles_generator as generator
+import game as gm
 
 class Item():
 	def __init__(self, item_def: ItemDef):
@@ -13,11 +14,11 @@ class Item():
 		self.selected = False
 		self.room = None
 	
-	def get_resale_cost(self):
+	def get_discard_value(self):
 		return int(self.cost * 0.5)
 	
-	def get_fill_request_cost(self):
-		return self.cost + 5
+	def get_fill_request_value(self):
+		return 0
 	
 	def tick(self):
 		pass	
@@ -70,11 +71,19 @@ class Bottle(Ingredient):
 	def is_brewed_potion(self):
 		return self.is_potion() and not self.brewing
 
-	def get_resale_cost(self):
-		return int(self.cost * 0.5) + self.get_contents_resale_cost()
+	def get_discard_value(self):
+		return super().get_discard_value() + self.get_contents_discard_value()
 	
-	def get_contents_resale_cost(self):
-		return int(sum(item.cost for item in self.ingredients) * 0.5)
+	def get_contents_discard_value(self):
+		if self.is_potion():
+			return 0
+		return sum(item.get_discard_value() for item in self.ingredients)
+
+	def get_fill_request_value(self):
+		if not self.is_potion():
+			return 0
+		total_cost = self.cost + sum(item.cost for item in self.ingredients)
+		return total_cost * 2
 	
 	def empty(self):
 		self.__init__(self.item_def)
@@ -100,16 +109,11 @@ class Bottle(Ingredient):
 		super().combine(other)
 
 	async def _generate_potion(self):
-		self.name = "Bottle of..."
-		self.desc = f"A bottle containing a brewing potion."
+		self.name = "Potion of..."
+		self.desc = f"A brewing potion."
 		self.brewing = True
-		name, desc = await generator.generate_potion(self.ingredients)	
-		self._on_potion_generated(name, desc)
-
-	def _on_potion_generated(self, name, desc):
+		self.name, self.desc = await generator.generate_potion(self.ingredients)	
 		self.brewing = False
-		self.name = name
-		self.desc = desc
 
 class Request(Item):
 	def __init__(self, name):
@@ -117,35 +121,26 @@ class Request(Item):
 		self.name = name
 		self.desc = "\"I'm preparing to host a grand midnight feast for the fae, but the enchanted banquet table keeps vanishing whenever I look away!\""
 		self.potion = None
-		self.pending_response = False
-		self.pending_response_start_time = -1
+		self.awaiting_outcome = False
+		self.complete = False
 		
-	def fill(self, potion: Bottle, on_response):
+	def fill(self, potion: Bottle, on_outcome):
 		assert(not self.potion)
 		self.potion = potion
 		self.desc += "\n\n\"I'll give this a go.\""
-		self.pending_response = True
-		self.pending_response_start_time = time.time()
-		self.on_response = on_response
+		self.generate_outcome_task = asyncio.create_task(self._generate_outcome(on_outcome))
 
-	def is_complete(self):
-		return self.potion and not self.pending_response
-
-	def tick(self):
-		super().tick()	
-		if self.pending_response:
-			if time.time() - self.pending_response_start_time > 2:
-				response = generator.generate_request_response(self.desc, self.potion)
-				self._on_response_generated(response)
-
-	def _on_response_generated(self, response):
-		self.pending_response = False
-		self.desc += f"\n\n{response}"
-		self.on_response(request=self, success=True)
+	async def _generate_outcome(self, on_outcome):
+		self.awaiting_outcome = True
+		desc, success = await generator.generate_request_outcome(self.desc, self.potion.desc)
+		success_str =\
+			f"SUCCESS!  +{self.potion.get_fill_request_value()}{gm.Game.gold_chr}" if success else\
+			"REFUNDED"
+		self.desc += f"\n\n\"{desc}\"\n\n{success_str}"
+		self.awaiting_outcome = False
+		self.complete = True
+		on_outcome(request=self, success=success)
 
 	def get_display_desc(self):
-		spinner = "\n\n" + util.get_spinner() if self.pending_response else ""
+		spinner = "\n\n" + util.get_spinner() if self.awaiting_outcome else ""
 		return f"{self.desc}{spinner}"
-	
-from room import *
-import bottles_generator as generator
