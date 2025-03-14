@@ -57,9 +57,27 @@ async def generate_potion(ingredients: List[itm.Ingredient]):
 
 	return name, desc
 
-def generate_request():
-	request = itm.Request("Emma")
-	request.desc = "\"I'm preparing to host a grand midnight feast for the fae, but the enchanted banquet table keeps vanishing whenever I look away!\""
+async def generate_request():
+	if use_dummy_data:
+		await asyncio.sleep(3)
+		request = itm.Request("Emma")
+		request.desc = "\"I'm preparing to host a grand midnight feast for the fae, but the enchanted banquet table keeps vanishing whenever I look away!\""
+		return request
+	
+	options = gen.Options()
+	
+	desc_prompt = "You are a customer at a magic shop in a fantasy land. In one sentence, describe the problem you are trying to solve, for which you are seeking a magical solution (for example perhaps you are about to attempt to fight a dragon, or perhaps it is taking too long to paint your house). Don't mention what you want (e.g. a spell or a potion), and don't prescribe the solution, just describe your problem."
+	options.temperature = 1.0
+	options.top_p = 20.0
+	desc, elapsed = await generator.generate(desc_prompt, options)
+
+	name_prompt = "Give me a first name for a fictional character. Respond with the name only."
+	options.temperature = 1.0
+	options.top_p = 20.0
+	name, elapsed = await generator.generate(name_prompt, options)
+
+	request = itm.Request(name)
+	request.desc = f"\"{desc}\""
 	return request
 
 async def generate_request_outcome(request_desc, potion_desc):

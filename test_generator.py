@@ -43,6 +43,7 @@ async def request_outcome():
 	print(outcome_desc)
 	
 	outcome_success_prompt = f"The problem: {request_desc}\nWhat happened next: {outcome_desc}\nWas the problem resolved? Reply with \"yes\" or \"no\"."
+	temperature=0.5,
 	outcome_success, elapsed = await generator.generate(outcome_success_prompt, options)
 	print(outcome_success)
 	

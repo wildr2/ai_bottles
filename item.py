@@ -121,8 +121,11 @@ class Request(Item):
 		self.name = name
 		self.desc = "\"I'm preparing to host a grand midnight feast for the fae, but the enchanted banquet table keeps vanishing whenever I look away!\""
 		self.potion = None
-		self.awaiting_outcome = False
-		self.complete = False
+		self.is_awaiting_outcome = False
+		self.is_complete = False
+		self.success_score = 3
+		self.fail_score = -2
+		self.skip_score = -1
 		
 	def fill(self, potion: Bottle, on_outcome):
 		assert(not self.potion)
@@ -130,17 +133,30 @@ class Request(Item):
 		self.desc += "\n\n\"I'll give this a go.\""
 		self.generate_outcome_task = asyncio.create_task(self._generate_outcome(on_outcome))
 
+	def skip(self):
+		self.desc += "\n\n> \"Sorry I can't help with that!\""
+		self.desc += f"\n\n{self.skip_score}{gm.Game.score_chr}"
+		self.is_complete = True
+
 	async def _generate_outcome(self, on_outcome):
-		self.awaiting_outcome = True
+		self.is_awaiting_outcome = True
 		desc, success = await generator.generate_request_outcome(self.desc, self.potion.desc)
-		success_str =\
-			f"SUCCESS!  +{self.potion.get_fill_request_value()}{gm.Game.gold_chr}" if success else\
-			"REFUNDED"
-		self.desc += f"\n\n\"{desc}\"\n\n{success_str}"
-		self.awaiting_outcome = False
-		self.complete = True
+
+		self.desc += f"\n\n\"{desc}\""
+
+		success_str = ""
+		if success:
+			self.desc += f"\n\nSUCCESS!"
+			self.desc += f"\n\n+{self.potion.get_fill_request_value()}{gm.Game.gold_chr}"
+			self.desc += f"\n+{self.success_score}{gm.Game.score_chr}"
+		else:
+			self.desc += f"\n\nREFUNDED"
+			self.desc += f"\n\n{self.fail_score}{gm.Game.score_chr}"
+
+		self.is_awaiting_outcome = False
+		self.is_complete = True
 		on_outcome(request=self, success=success)
 
 	def get_display_desc(self):
-		spinner = "\n\n" + util.get_spinner() if self.awaiting_outcome else ""
+		spinner = "\n\n" + util.get_spinner() if self.is_awaiting_outcome else ""
 		return f"{self.desc}{spinner}"

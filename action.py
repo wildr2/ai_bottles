@@ -106,6 +106,29 @@ class FillRequestAction(Action):
 		super().do(game)
 		game.fill_request(game.room, game.room.get_selected_item_index())
 
+class SkipRequestAction(Action):
+	def __init__(self):
+		self.name = "decline"
+		self.key = "backspace"
+		self.room_types = [rm.RequestRoom]
+		self.requires_selected_item = True
+
+	def get_display_name(self, game):
+		request = game.room.get_selected_item()
+		return f"{self._key_label()}{self.name} {request.skip_score}{gm.Game.score_chr}"
+
+	def is_available(self, game):
+		if not super().is_available(game):
+			return False
+		request = game.room.get_selected_item()
+		return not request.is_complete and not request.is_awaiting_outcome
+
+	def do(self, game):
+		super().do(game)
+		request = game.room.get_selected_item()
+		request.skip()
+		game.score += request.skip_score
+
 class RerollShopAction(Action):
 	def __init__(self):
 		self.name = f"reroll {rm.ShopRoom.reroll_cost}{gm.Game.gold_chr}"

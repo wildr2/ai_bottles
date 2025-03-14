@@ -9,7 +9,9 @@ import ingredient_glossary as ig
 
 class Game():
 	width = 100
-	gold_chr = "●"
+	gold_chr = f"●"
+	score_name = "Fame"
+	score_chr = "◈"
 
 	def __init__(self, stdscr):
 		self.stdscr = stdscr
@@ -31,6 +33,7 @@ class Game():
 			act.CombineItemsAction(),
 			act.SellAction(),
 			act.FillRequestAction(),
+			act.SkipRequestAction(),
 		]
 
 		self.room = self.desk_room
@@ -143,6 +146,9 @@ class Game():
 	def _on_request_outcome(self, request, success):
 		if success:
 			self.gold += request.potion.get_fill_request_value()
+			self.score += request.success_score
+		else:
+			self.score += request.fail_score
 		
 async def main(stdscr):
 	curses.curs_set(0) # Hide cursor
