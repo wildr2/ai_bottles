@@ -104,7 +104,6 @@ class DeskRoom(Room):
 		super().__init__("Workshop", "w")
 		items = [
 			ingredientGlossary.instantiate_by_name("Bottle"),
-			ingredientGlossary.instantiate_by_name("Salt"),
 		]
 		for item in items:
 			self.add_item(item)

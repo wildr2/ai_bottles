@@ -2,6 +2,7 @@ import msvcrt
 import curses
 import asyncio
 import keyboard
+import util
 import action as act
 import room as rm
 import item as itm
@@ -17,8 +18,14 @@ class Game():
 		self.stdscr = stdscr
 		self.input_key = ""
 		self.quit = False
+		
+		keyboard.on_press(self._on_keypress, suppress=False)
+		self.load_task = asyncio.create_task(self.load())
 
+	async def load(self):
 		self.ingredientGlossary = ig.IngredientGlossary()
+		await self.ingredientGlossary.load()
+
 		self.desk_room = rm.DeskRoom(self.ingredientGlossary)
 		self.shop_room = rm.ShopRoom(self.ingredientGlossary)
 		self.request_room = rm.RequestRoom()
@@ -41,10 +48,24 @@ class Game():
 		self.gold = 100
 		self.score = 0
 		self.combining = False
+
+	def is_loading(self):
+		if not self.load_task:
+			return False
+		if not self.load_task.done():
+			return True
+
+		if e := self.load_task.exception():
+			assert False, e
 		
-		keyboard.on_press(self._on_keypress, suppress=False)
+		self.load_task = None
+		return False
 
 	def tick(self):
+		if self.is_loading():
+			self._draw(is_loading=True)
+			return
+
 		for room in self.rooms:
 			room.tick()
 		
@@ -88,8 +109,12 @@ class Game():
 	def _on_keypress(self, e):
 		self.input_key = e.name
 
-	def _draw(self):
-		self.room.draw(self)
+	def _draw(self, is_loading=False):
+		if is_loading:
+			self.stdscr.addstr(0, 0, "".center(Game.width,"-"))
+			self.stdscr.addstr(5, 0, f"LOADING {util.get_spinner()}".center(Game.width," "))
+		else:
+			self.room.draw(self)
 
 	def set_room(self, room):
 		if self.room:

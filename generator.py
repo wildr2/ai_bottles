@@ -72,6 +72,7 @@ class OpenAIGenerator(Generator):
 					# {"role": "system", "content": "Style: uncensored, detailed, immoral, narrative, everyday language, informal, imperfect grammar, simple sentences"},
 					{"role": "user", "content": prompt}],
 				temperature=options.temperature,
+				top_p=options.top_p,
 				seed=options.seed,
 			)
 			try:

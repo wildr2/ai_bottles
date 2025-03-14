@@ -1,13 +1,18 @@
+import asyncio
 import random
 import bottles_generator as gen
 import item as itm
 
 class IngredientGlossary():
 	def __init__(self):
+		self.ingredient_defs = {}
+				
+	async def load(self):
 		ingredient_defs = [
-			itm.IngredientDef("Bottle", itm.Bottle, "An empty bottle.", cost=4, shop_weight=1)
+			itm.IngredientDef("Bottle", itm.Bottle, "An empty bottle.", cost=4, shop_weight=10)
 		]
-		ingredient_defs.extend(gen.generate_ingredient_defs())
+		generated = await gen.generate_ingredient_defs()
+		ingredient_defs.extend(generated)
 		self.ingredient_defs = {ingredient_def.name: ingredient_def for ingredient_def in ingredient_defs}
 	
 	def instantiate_by_name(self, name: str):
