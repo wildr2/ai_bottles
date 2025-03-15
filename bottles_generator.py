@@ -26,14 +26,23 @@ async def generate_ingredient_defs():
 		lines = file.readlines()
 		for line in lines:
 			examples.append(line.strip().capitalize())
+	random.shuffle(examples)
 	
 	defs = []
 	options = gen.Options(
-		temperature=0.1,
+		temperature=0.5,
 	)
+	other_topics = []
 	for example in examples:
-		desc_prompt = f"Generate a one sentence description for a potion ingredient named \"{example}\"."
+		other_topics_str = "".join(f"{topic}," for topic in other_topics[-10:])
+		other_topics_str = other_topics_str[:-1]
+		topic_prompt = f"Already used effect types: {other_topics_str}\nHelp me develop a fantasy setting. Give me two new magical effect types (one word each) that a potion ingredient named \"{example}\" would have. Respond with just the two comma separated words."
+		topic, elapsed = await generator.generate(topic_prompt, options)
+		other_topics.append(topic)
+
+		desc_prompt = f"Generate a one sentence description for a potion ingredient named \"{example}\". Note the categories of effects it can produce, which should relate to: \"{topic}\"."
 		desc, elapsed = await generator.generate(desc_prompt, options)
+
 		ing = itm.IngredientDef(example, desc=desc, cost=random.randint(2, 10), shop_weight=1)
 		defs.append(ing)
 

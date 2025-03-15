@@ -120,10 +120,13 @@ async def ingredient():
 	]
 
 	options = gen.Options(
-		temperature=0.1,
+		temperature=0.5,
 		# top_p=1.0,
 	)
-	for i in range(1):
+	examples = random.sample(examples, k=10)
+	descs = []
+	other_topics = []
+	for example in examples:
 		# topic_n = random.randint(1, 2)
 		# topics_str = "".join(f"- {topic}\n" for topic in chosen_topics)
 		# chosen_topics = random.sample(topics, k=topic_n)
@@ -141,10 +144,24 @@ async def ingredient():
 		# name, elapsed = await generator.generate(name_prompt, options)
 		# print(f"{name} ({example}, {topic})")
 
-		example = random.sample(examples, k=1)[0]
-		desc_prompt = f"Generate a one sentence description for a potion ingredient named \"{example}\"."
+		other_topics_str = "".join(f"{topic}," for topic in other_topics[-10:])
+		other_topics_str = other_topics_str[:-1]
+		ex_topics = random.sample(topics, k=2)
+		ex_topics_str = "".join(f"{topic}," for topic in ex_topics)
+		ex_topics_str = ex_topics_str[:-1]
+		# topic_prompt = f"Already used effect types: {other_topics_str}\nHelp me develop a fantasy setting. Give me two new magical effect types (one word each) that a potion ingredient named \"{example}\" would have, for instance \"{ex_topics_str}\". Respond with just the two comma separated words."
+		topic_prompt = f"Already used effect types: {other_topics_str}\nHelp me develop a fantasy setting. Give me two new magical effect types (one word each) that a potion ingredient named \"{example}\" would have. Respond with just the two comma separated words."
+		topic, elapsed = await generator.generate(topic_prompt, options)
+		other_topics.append(topic)
+		# print(f"- {example}, \"{ex_topics_str}\": {topic}")
+		print(f"- {example}: {topic}")
+
+		# others_str = "".join(f"- {desc}\n" for desc in descs[-5:])
+		# desc_prompt = f"Other ingredients:\n{others_str}\nGenerate a one sentence description for a potion ingredient named \"{example}\"."
+		desc_prompt = f"Generate a one sentence description for a potion ingredient named \"{example}\". Note the categories of effects it can produce, which should relate to: \"{topic}\"."
 		desc, elapsed = await generator.generate(desc_prompt, options)
-		print(f"{desc} ({example})")
+		descs.append(desc)
+		print(f"- {desc}")
 
 async def potion():
 	ingredients = [
@@ -202,8 +219,8 @@ async def request_outcome():
 	
 
 async def main():
-	# wait ingredient()
-	await potion()
+	await ingredient()
+	# await potion()
 	# await request_outcome()
 
 asyncio.run(main())

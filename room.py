@@ -101,7 +101,7 @@ class Room():
 
 class DeskRoom(Room):
 	def __init__(self, ingredientGlossary):
-		super().__init__("Workshop", "w")
+		super().__init__("Apothecary", "w")
 		items = [
 			ingredientGlossary.instantiate_by_name("Bottle"),
 		]
