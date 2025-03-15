@@ -12,7 +12,7 @@ class Game():
 	width = 100
 	gold_chr = f"●"
 	score_name = "Fame"
-	score_chr = "◈"
+	score_chr = "▲"
 
 	def __init__(self, stdscr):
 		self.stdscr = stdscr

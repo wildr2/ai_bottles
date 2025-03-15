@@ -2,9 +2,9 @@ import ollama
 from openai import AsyncOpenAI
 import time
 from dataclasses import dataclass
-# Create api_keys.py locally.
-import api_keys
 from typing import Optional
+import json
+import util
 
 provider = "openai"
 model_name = {
@@ -86,12 +86,24 @@ class OpenAIGenerator(Generator):
 		elapsed = time.time() - start_time
 		return content, elapsed
 	
+def get_api_key(provider):
+	personal_path = util.resource_path("data/personal_api_key.json")
+	ship_path = util.resource_path("data/api_key.json")
+	paths = [personal_path, ship_path]
+	for path in paths:
+		try:
+			with open(path) as file:
+				data = json.load(file)
+				return data[provider]
+		except:
+			pass
+	
 def create_generator():
 	if use_dummy_model:
 		return Generator("dummy")
 	elif provider == "ollama":
 		return OllamaGenerator(model_name, ollama_context_length)
 	elif provider == "openai":
-		return OpenAIGenerator(model_name, api_keys.openai_api_key)
+		return OpenAIGenerator(model_name, get_api_key("openai"))
 	else:
 		raise ValueError(f"Unknown provider: {provider}")
