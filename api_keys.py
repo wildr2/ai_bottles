@@ -1,0 +1,1 @@
+openai_api_key = "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"
