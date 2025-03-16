@@ -7,11 +7,36 @@ import generator as gen
 import item as itm
 import util
 
-use_dummy_ingredient_data = True
+use_dummy_ingredient_data = False
 use_dummy_potion_data = False
 use_dummy_request_data = False
-write_dummy_ingredient_data = False
+write_dummy_ingredient_data = True
 dummy_ingredient_data_path = util.resource_path("data/dummy_ingredient_data.pkl")
+
+def get_ingredient_examples():
+	examples = []
+	with open(util.resource_path("data/ingredient_examples.txt"), "r") as file:
+		lines = file.readlines()
+		for line in lines:
+			examples.append(line.strip().capitalize())
+	return examples
+
+def get_effect_topics():
+	topics = []
+	with open(util.resource_path("data/effect_topics2.txt"), "r") as file:
+		lines = file.readlines()
+		for line in lines:
+			line = line.strip()
+			topics.append(line)
+	return topics
+
+def get_potion_name_examples():
+	examples = []
+	with open(util.resource_path("data/potion_name_examples.txt"), "r") as file:
+		lines = file.readlines()
+		for line in lines:
+			examples.append("Potion of " + line.strip())
+	return examples
 
 async def generate_ingredient_defs():
 	await asyncio.sleep(1)
@@ -20,32 +45,49 @@ async def generate_ingredient_defs():
 			defs = pickle.load(file)
 			await asyncio.sleep(1)
 			return defs
+		
+	examples = get_ingredient_examples()
+	# examples = random.sample(examples, k=5)
+	ex_embeddings_list = gen.create_embeddings(examples)
+	ex_embeddings = {examples[i]: embedding for i, embedding in enumerate(ex_embeddings_list)}
 
-	examples = []
-	with open("ingredient_examples.txt", "r") as file:
-		lines = file.readlines()
-		for line in lines:
-			examples.append(line.strip().capitalize())
-	random.shuffle(examples)
+	topics = get_effect_topics()
+	topic_embeddings_list = gen.create_embeddings(topics)
+	topic_embeddings = {topics[i]: embedding for i, embedding in enumerate(topic_embeddings_list)}
+
+	comps = []
+	for example in examples:
+		ee = ex_embeddings[example]
+		for i in range(len(topics)):
+			topic = topics[i]
+			te = topic_embeddings[topic]
+			similarity = gen.compare_embeddings(te, ee)
+			comps.append((example, topic, similarity))
 	
+	comps = sorted(comps, key=lambda x: x[2], reverse=True)
+	ex_topics = {}
+	while len(ex_topics) < len(examples):
+		seen_topics = set()
+		for comp in comps:
+			ex = comp[0]
+			topic = comp[1]
+			if ex in ex_topics or topic in seen_topics:
+				continue
+
+			ex_topics[ex] = topic
+			seen_topics.add(topic)
+
 	defs = []
 	options = gen.Options(
-		temperature=0.5,
+		temperature=0.1,
 	)
-	other_topics = []
-	for example in examples:
-		other_topics_str = "".join(f"{topic}," for topic in other_topics[-10:])
-		other_topics_str = other_topics_str[:-1]
-		topic_prompt = f"Already used effect types: {other_topics_str}\nHelp me develop a fantasy setting. Give me two new magical effect types (one word each) that a potion ingredient named \"{example}\" would have. Respond with just the two comma separated words."
-		topic, elapsed = await generator.generate(topic_prompt, options)
-		other_topics.append(topic)
-
-		desc_prompt = f"Generate a one sentence description for a potion ingredient named \"{example}\". Note the categories of effects it can produce, which should relate to: \"{topic}\"."
+	for example, topic in ex_topics.items():
+		desc_prompt = f"Write a short one sentence description of the fictional magic potion ingredient \"{example}\". Give the impression that it is associated with {topic} magic without saying so directly."
 		desc, elapsed = await generator.generate(desc_prompt, options)
-
 		ing = itm.IngredientDef(example, desc=desc, cost=random.randint(2, 10), shop_weight=1)
+		ing.affinity = topic
 		defs.append(ing)
-
+	
 	if write_dummy_ingredient_data:
 		with open(dummy_ingredient_data_path, "wb") as file:
 			pickle.dump(defs, file)
@@ -59,15 +101,15 @@ async def generate_potion(ingredients: List[itm.Ingredient]):
 	
 	seed = 42
 	
-	ingredients_str = "".join(f"- {ing.desc}\n" for ing in ingredients)
-	desc_prompt = f"{ingredients_str}Write a one sentence description of the effects of the magical potion brewed from the above ingredients. Don't mention the ingredients in the description. This description will appear next to the name of the potion in an alchemical recipe book."
+	ingredients_str = "".join(f"- {ing.name} (affinity for {ing.affinity} magic): {ing.desc}\n" for ing in ingredients)
+	desc_prompt = f"{ingredients_str}Imagine a fictional magic potion with the above ingredients. It should have a single effect. Describe it in one short sentence."
 	options = gen.Options(
 		seed=seed,
-		temperature=0.5,
+		temperature=0.01,
 	)
 	desc, elapsed = await generator.generate(desc_prompt, options)
 	
-	name_prompt = f"Generate a name for a magical potion. Provide only the name and only one name. It should be of the form \"Potion of...\". The name should describe the effects of the potion which are as follows:\n{desc}"
+	name_prompt = f"Generate a simple name for a potion with the following description. Provide only the name and only one name. It should be of the form \"Potion of...\" and should simply describe what the potion does, for example \"Potion of Invisibility\".\n{desc}"
 	options = gen.Options(
 		seed=seed,
 		temperature=1.0,
@@ -93,6 +135,7 @@ async def generate_request():
 	name_prompt = "Give me a first name for a fictional character. Respond with the name only."
 	options = gen.Options(
 		temperature=1.0,
+		top_p=1.0,
 	)
 	name, elapsed = await generator.generate(name_prompt, options)
 

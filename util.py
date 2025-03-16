@@ -30,3 +30,8 @@ def resource_path(relative_path):
 		base_path = os.path.abspath(".")
 
 	return os.path.join(base_path, relative_path)
+
+def format_str_list(list, fmt="{0}", separator=", "):
+	str = "".join(f"{fmt.format(item)}{separator}"for item in list)
+	str = str[:-len(separator)]
+	return str

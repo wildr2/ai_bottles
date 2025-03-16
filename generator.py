@@ -1,5 +1,7 @@
 import ollama
-from openai import AsyncOpenAI
+import openai
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 import time
 from dataclasses import dataclass
 from typing import Optional
@@ -55,7 +57,7 @@ class OllamaGenerator(Generator):
 class OpenAIGenerator(Generator):
 	def __init__(self, model_name, api_key):
 		super().__init__(model_name)
-		self.client = AsyncOpenAI(
+		self.client = openai.AsyncOpenAI(
 			base_url="https://openrouter.ai/api/v1",
 			api_key=api_key
 		)
@@ -107,3 +109,16 @@ def create_generator():
 		return OpenAIGenerator(model_name, get_api_key("openai"))
 	else:
 		raise ValueError(f"Unknown provider: {provider}")
+	
+def create_embeddings(texts):
+	response = ollama.embed(model="nomic-embed-text", input=texts)
+	return response.embeddings
+
+def create_embedding(text):
+	return create_embeddings([text])[0]
+
+def compare_embeddings(a, b):
+	vector1 = np.array(a).reshape(1, -1)
+	vector2 = np.array(b).reshape(1, -1)
+	similarity_score = cosine_similarity(vector1, vector2)[0][0]
+	return similarity_score

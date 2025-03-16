@@ -42,11 +42,13 @@ class Ingredient(Item):
 	def __init__(self, item_def: IngredientDef):
 		super().__init__(item_def)
 		self.cost = item_def.cost if item_def else 0
+		self.affinity = item_def.affinity
 
 class IngredientDef(ItemDef):
 	def __init__(self, name, item_type: Type[Ingredient]=Ingredient, desc="", cost=0, shop_weight=1):
 		super().__init__(name, item_type, desc)
 		self.desc = desc
+		self.affinity = ""
 		self.cost = cost
 		self.shop_weight = shop_weight
 

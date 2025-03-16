@@ -1,167 +1,55 @@
 import random
 import asyncio
 import generator as gen
+import bottles_generator as bg
+import util
 
 generator = gen.create_generator()
 
+
 async def ingredient():
-	topics = [
-		"time",
-		"language",
-		"elements",
-		"weather",
-		"mind",
-		"body",
-		"spirit",
-		"gravity",
-		"nature",
-		"destruction",
-		"light",
-		"sound",
-		"dark",
-		"manipulation",
-		"creation",
-		"transformation",
-		"chaos",
-		"order",
-		"poison",
-		"protection",
-		"divination",
-		"divinity",
-		"illusion",
-		"luck",
-		"sex",
-		"technology",
-		"life",
-		"death",
-		"concealment",
-		"emotion",
-	]
-	examples = [
-		"parsley",
-		"sage",
-		"rosemary",
-		"thyme",
-		"mint",
-		"lavender",
-		"rose petals",
-		"gold dust",
-		"silver dust",
-		"copper dust",
-		"owl feather",
-		"raven feather",
-		"ink",
-		"holly berries",
-		"orange peel",
-		"deer antler velvet",
-		"pearl",
-		"birch bark",
-		"fulgurite",
-		"bear fat",
-		"chameleon scales",
-		"coral dust",
-		"eagle eye",
-		"frog's leg",
-		"obsidian",
-		"pumice",
-		"salt",
-		"spider silk",
-		"wolf fur",
-		"bees' royal jelly",
-		"human tears",
-		"dew",
-		"pollen",
-		"mercury",
-		"juice of juniper berries",
-		"safflower oil",
-		"bat wings",
-		"beetle carapace",
-		"crawler venom",
-		"bone dust",
-		"rat tail",
-		"flax seed oil",
-		"pig foot",
-		"burdock root",
-		"wild ginger",
-		"bluetts",
-		"elderberry leaves",
-		"red trillium",
-		"salamander eggs",
-		"poison ivy leaves",
-		"discarded snake skin",
-		"cinnamon",
-		"chamomile",
-		"mugwort",
-		"frankincense",
-		"sulfur",
-		"pine sap",
-		"valerian",
-		"garlic",
-		"nightshade",
-		"fermented raspberries",
-		"white gooseberries",
-		"black sand",
-		"fresh moss",
-		"crushed rutile",
-		"flakes of pyrite",
-		"skin of toad",
-		"serpent's egg",
-		"eye of newt",
-		"tongue of dog",
-		"lizard tail",
-		"root of mandrake",
-		"slip of yew",
-		"twig of fern",
-		"oak acorns",
-		"hart's blood",
-		"goat's milk",
-		"sheep's wool",
-		"driftwood",
-	]
+	examples = bg.get_ingredient_examples()
+	examples = random.sample(examples, k=15)
+	ex_embeddings_list = gen.create_embeddings(examples)
+	ex_embeddings = {examples[i]: embedding for i, embedding in enumerate(ex_embeddings_list)}
 
-	options = gen.Options(
-		temperature=0.5,
-		# top_p=1.0,
-	)
-	examples = random.sample(examples, k=10)
-	descs = []
-	other_topics = []
+	topics = bg.get_effect_topics()
+	topic_embeddings_list = gen.create_embeddings(topics)
+	topic_embeddings = {topics[i]: embedding for i, embedding in enumerate(topic_embeddings_list)}
+
+	comps = []
 	for example in examples:
-		# topic_n = random.randint(1, 2)
-		# topics_str = "".join(f"- {topic}\n" for topic in chosen_topics)
-		# chosen_topics = random.sample(topics, k=topic_n)
-		# print(f"{name} ({''.join(topic + ', ' for topic in chosen_topics)})")
+		ee = ex_embeddings[example]
+		for i in range(len(topics)):
+			topic = topics[i]
+			te = topic_embeddings[topic]
+			similarity = gen.compare_embeddings(te, ee)
+			comps.append((example, topic, similarity))
+	
+	comps = sorted(comps, key=lambda x: x[2], reverse=True)
+	ex_topics = {}
+	while len(ex_topics) < len(examples):
+		seen_topics = set()
+		for comp in comps:
+			ex = comp[0]
+			topic = comp[1]
+			if ex in ex_topics or topic in seen_topics:
+				continue
 
-		# chosen_examples = random.sample(examples, k=3)
-		# examples_str = "".join(f"- {example}\n" for example in chosen_examples)
-		# name_prompt = f"Predict the next ingredient in the list (it won't be a repeat). Provide only the name and only one name.\n{examples_str}"
-		# name, elapsed = await generator.generate(name_prompt, options)
-		# print(f"{name} ({''.join(example + ', ' for example in chosen_examples)})")
-		
-		# example = random.sample(examples, k=1)[0]
-		# topic = random.sample(topics, k=1)[0]
-		# name_prompt = f"Suppose the ingredient \"{example}\" is used to create a potion with a \"{topic}\" related effect. Tweak the name of the ingredient to better match the effect. Provide only the new name."
-		# name, elapsed = await generator.generate(name_prompt, options)
-		# print(f"{name} ({example}, {topic})")
+			ex_topics[ex] = topic
+			seen_topics.add(topic)
 
-		other_topics_str = "".join(f"{topic}," for topic in other_topics[-10:])
-		other_topics_str = other_topics_str[:-1]
-		ex_topics = random.sample(topics, k=2)
-		ex_topics_str = "".join(f"{topic}," for topic in ex_topics)
-		ex_topics_str = ex_topics_str[:-1]
-		# topic_prompt = f"Already used effect types: {other_topics_str}\nHelp me develop a fantasy setting. Give me two new magical effect types (one word each) that a potion ingredient named \"{example}\" would have, for instance \"{ex_topics_str}\". Respond with just the two comma separated words."
-		topic_prompt = f"Already used effect types: {other_topics_str}\nHelp me develop a fantasy setting. Give me two new magical effect types (one word each) that a potion ingredient named \"{example}\" would have. Respond with just the two comma separated words."
-		topic, elapsed = await generator.generate(topic_prompt, options)
-		other_topics.append(topic)
-		# print(f"- {example}, \"{ex_topics_str}\": {topic}")
-		print(f"- {example}: {topic}")
-
-		# others_str = "".join(f"- {desc}\n" for desc in descs[-5:])
-		# desc_prompt = f"Other ingredients:\n{others_str}\nGenerate a one sentence description for a potion ingredient named \"{example}\"."
-		desc_prompt = f"Generate a one sentence description for a potion ingredient named \"{example}\". Note the categories of effects it can produce, which should relate to: \"{topic}\"."
+			label = f"{ex}:"
+			print(f"{label:<25}{topic:<15}")
+			
+	options = gen.Options(
+		temperature=0.1,
+	)
+	for example, topic in ex_topics.items():
+		desc_prompt = f"Write a short one sentence description of the fictional magic potion ingredient \"{example}\". Give the impression that it is associated with {topic} magic without saying so directly."
 		desc, elapsed = await generator.generate(desc_prompt, options)
-		descs.append(desc)
 		print(f"- {desc}")
+	
 
 async def potion():
 	ingredients = [
@@ -171,28 +59,42 @@ async def potion():
 		"Deer antler velvet is a soft, cartilaginous tissue found on the growing antlers of male deer, often used in traditional medicine for its purported health benefits.",
 		"Flakes of pyrite are small, shiny, and brittle pieces of fool's gold, often used in potions for their reflective and heat-conducting properties.",
 	]
+	ingredients = bg.get_ingredient_examples()
+	topics = bg.get_effect_topics()
 
-	chosen_ingredients = random.sample(ingredients, k=2)
-	ingredients_str = "".join(f"- {ing}\n" for ing in chosen_ingredients)
-	print(ingredients_str)
+	# chosen_ingredients = random.sample(ingredients, k=2)
+	# for i in range(len(chosen_ingredients)):
+	# 	topic = random.sample(topics, 1)[0]
+	# 	chosen_ingredients[i] += f" (effect topic: {topic})"
+	# ingredients_str = "".join(f"- {ing}\n" for ing in chosen_ingredients)
 	# ingredients_str = "- Dragonfly Wings\n- Fire Salts\n"
+	# ingredients_str = "- Black sand (affinity: darkness)\n- Crawler venom (affinity: barrier)"
+	# ingredients_str = "- Dragonfly Wings (effect category: flight)\n- Fire Salts (effect category: transformation)\n"
+	a = "Driftwood, weathered by time and tides, carries an ember-like essence within its grain."
+	a_affinity = "Driftwood (affinity for fire magic): "
+	b = "Sheep's wool, when harvested under a full moon, carries an ethereal softness that whispers of distant pastures."
+	b_affinity = "Sheep's wool (affinity for animal magic): "
+	ingredients_str = f"- {a_affinity}{a}\n- {b_affinity}{b}\n"
+	print(ingredients_str)
 	
-	potion_desc_prompt = f"{ingredients_str}\nWrite a one sentence description of the effects of the magical potion brewed from the above ingredients. Don't mention the ingredients in the description. This description will appear next to the name of the potion in an alchemical recipe book."
+	# potion_desc_prompt = f"{ingredients_str}\nWrite a one sentence description of the effects of the magical potion brewed from the above ingredients. Don't mention the ingredients in the description. This description will appear next to the name of the potion in an alchemical recipe book."
+	# potion_desc_prompt = f"{ingredients_str}Invent a creative magical effect for the potion brewed from the above ingredients. Write a short and snappy one sentence description of the potion."
+	desc_prompt = f"{ingredients_str}Imagine a fictional magic potion with the above ingredients. It should have a single effect. Describe it in one short sentence."
 	options = gen.Options(
 		temperature=0.01,
 	)
-	desc, elapsed = await generator.generate(potion_desc_prompt, options)
+	desc, elapsed = await generator.generate(desc_prompt, options)
 	# desc = "This potion grants the drinker the ability to glide through the air for a short duration."
 	print(desc)
 
-	options = gen.Options(
-		temperature=1.0,
-		# top_p=20.0,
-	)
-	for i in range(1):
-		name_prompt = f"Generate a name for a magical potion. Provide only the name and only one name. It should be of the form \"Potion of...\". The name should describe the effects of the potion which are as follows:\n{desc}"
-		name, elapsed = await generator.generate(name_prompt, options)
-		print(name)
+	# options = gen.Options(
+	# 	temperature=1.0,
+	# 	# top_p=20.0,
+	# )
+	# for i in range(1):
+		# name_prompt = f"Generate a simple name for a magical potion with the following description. Provide only the name and only one name. It should be of the form \"Potion of...\".\n{desc}"
+	# 	name, elapsed = await generator.generate(name_prompt, options)
+	# 	print(name)
 
 async def request_outcome():
 	request_desc = "\"I'm preparing to host a grand midnight feast for the fae, but the enchanted banquet table keeps vanishing whenever I look away!\""

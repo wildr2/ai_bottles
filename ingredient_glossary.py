@@ -1,7 +1,8 @@
+from __future__ import annotations
 import asyncio
 import random
-import bottles_generator as gen
 import item as itm
+import bottles_generator as gen
 
 class IngredientGlossary():
 	def __init__(self):
