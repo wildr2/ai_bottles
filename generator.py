@@ -89,16 +89,9 @@ class OpenAIGenerator(Generator):
 		return content, elapsed
 	
 def get_api_key(provider):
-	personal_path = util.resource_path("data/personal_api_key.json")
-	ship_path = util.resource_path("data/api_key.json")
-	paths = [personal_path, ship_path]
-	for path in paths:
-		try:
-			with open(path) as file:
-				data = json.load(file)
-				return data[provider]
-		except:
-			pass
+	with open(util.resource_path("data/api_key.json")) as file:
+		data = json.load(file)
+		return data[provider]
 	
 def create_generator():
 	if use_dummy_model:

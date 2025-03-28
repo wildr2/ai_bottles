@@ -7,10 +7,10 @@ import generator as gen
 import item as itm
 import util
 
-use_dummy_ingredient_data = False
+use_dummy_ingredient_data = True
 use_dummy_potion_data = False
 use_dummy_request_data = False
-write_dummy_ingredient_data = True
+write_dummy_ingredient_data = False
 dummy_ingredient_data_path = util.resource_path("data/dummy_ingredient_data.pkl")
 
 def get_ingredient_examples():
